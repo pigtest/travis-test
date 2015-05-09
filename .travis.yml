@@ -5,8 +5,10 @@ python: "3.4"
 before_install:
   - sudo apt-get update -qq
   - sudo apt-get install -qq php5-cli php5-sqlite
+  - nohup bash -c "cd server/; php -S 127.0.0.1:8080" &
 
 install:
   - pip install -r client/requirements.txt
+  - bash -c "cd client/; python setup install"
 
-script: nosetests
+script: bash -c "cd client/; bush up requirements.txt; bush ls"
