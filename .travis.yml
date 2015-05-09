@@ -1,0 +1,9 @@
+language: python
+
+python: "3.4"
+
+install:
+  - "sudo apt-get install php5-cli php5-sqlite"
+  - "pip install -r client/requirements.txt"
+
+script: nosetests
