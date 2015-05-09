@@ -9,6 +9,6 @@ before_install:
 
 install:
   - pip install -r client/requirements.txt
-  - bash -c "cd client/; python setup install"
+  - bash -c "cd client/; python setup.py install"
 
 script: bash -c "cd client/; bush up requirements.txt; bush ls"
