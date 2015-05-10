@@ -4,10 +4,9 @@ import cgi
 import json
 import tarfile
 import tempfile
-import datetime
 import urllib.parse
-import dateutil.parser
 
+import arrow
 import requests
 
 from requests_toolbelt import MultipartEncoder, MultipartEncoderMonitor
@@ -22,10 +21,7 @@ EXTREME = 4
 
 class BushFile():
 
-    def __init__(self, tag, name, date=None, compressed=None, **kwargs):
-
-        if date is None:
-            date = str(datetime.datetime.fromtimestamp(0))
+    def __init__(self, tag, name, date=0, compressed=None, url=None, **kwargs):
 
         if compressed is None:
             compressed = name.endswith('.tar.gz')
@@ -33,15 +29,25 @@ class BushFile():
         self.tag = tag
         self.compressed = compressed
         self.name = name[:-7] if self.compressed else name
-        self.date = dateutil.parser.parse(date)
+        self.date = arrow.get(date)
+        self.url = url
 
     def __repr__(self):
         return "BushFile(tag=%s, name=%s, date=%s, compressed=%s)" % (
             self.tag, self.name, self.data, self.compressed)
 
-    def output(self, file=sys.stdout, align=0):
-        print("%s\t%-*s  -> %s" % (self.date.strftime("%Y-%m-%d %H:%M:%S"),
-                                   align, self.tag, self.name), file=file)
+    def output(self, file=sys.stdout, align=0, extended=False):
+        if not extended:
+            date = self.date.humanize()
+        else:
+            date = self.date.strftime("%Y-%m-%d %H:%M:%S")
+
+        desc = "%s\t%-*s  -> %s" % (date, align, self.tag, self.name)
+
+        if extended:
+            desc += " [%s]" % self.url
+
+        print(desc, file=file)
 
 
 class BushAPI():
@@ -64,12 +70,6 @@ class BushAPI():
             if part:
                 return part
         return basename  # lol: this was only dots!
-
-    def sanitize_tag(self, tag):
-        for sufix in [".tar.gz"]:
-            if tag.endswith(sufix):
-                tag = tag[:-len(sufix)]
-        return tag
 
     def assert_response(self, r, acceptable=(200,)):
         if r.status_code not in acceptable:
@@ -113,28 +113,38 @@ class BushAPI():
     def list(self):
         r = requests.get(self.url("index.php?request=list"))
         self.assert_response(r)
-        return [BushFile(**f) for f in json.loads(r.text)]
+        return [BushFile(url=self.getddl(f['tag']), **f)
+                for f in json.loads(r.text)]
 
     def upload(self, filepath, tag=None, callback=None):
 
-        filepath = os.path.realpath(filepath)
-        basename = os.path.basename(filepath)
+        if isinstance(filepath, str):
+            filepaths = [filepath]
+        else:
+            filepaths = filepath
 
-        tag = tag or self.tag_for_path(filepath)
-        tag = self.sanitize_tag(tag)
+        if tag is None and len(filepaths) != 1:
+            raise ValueError("Must specify tag for multifile.")
+
+        tag = tag or self.tag_for_path(filepaths[0])
 
         tmp = tempfile.TemporaryFile()
+        tar = tarfile.open("bush_upload.tar.gz", "w:gz", fileobj=tmp)
 
-        tarname = "%s.tar.gz" % basename
-        tar = tarfile.open(tarname, "w:gz", fileobj=tmp)
-        tar.add(filepath, arcname=basename)
+        basenames = []
+
+        for fp in filepaths:
+            basename = os.path.basename(fp)
+            basenames.append(basename)
+            tar.add(fp, arcname=basename)
+
         tar.close()
-
         tmp.seek(0)
 
+        filename = "%s.tar.gz" % ", ".join(basenames)
         encoder = MultipartEncoder(fields={
             'tag': tag,
-            'file': (tarname, tmp, 'application/octet-stream')
+            'file': (filename, tmp, 'application/octet-stream')
         })
 
         if callback is not None:
@@ -160,9 +170,11 @@ class BushAPI():
 
         return tag
 
-    def download(self, tag, dest, callback=None, chunksz=8192):
+    def getddl(self, tag):
+        tag = urllib.parse.quote(tag)
+        return self.url("index.php?request=get&tag=%s" % tag)
 
-        tag = self.sanitize_tag(tag)
+    def download(self, tag, dest, callback=None, chunksz=8192):
 
         r = requests.get(self.url("index.php?request=get"),
                          params={"tag": tag}, stream=True)
@@ -273,8 +285,6 @@ class BushAPI():
         tar.extractall(path=dest, members=members)
 
     def delete(self, tag):
-
-        tag = self.sanitize_tag(tag)
 
         r = requests.get(self.url("index.php?request=delete"),
                          params={"tag": tag})

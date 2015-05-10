@@ -1,3 +1,4 @@
+import os
 import sys
 import time
 import pprint
@@ -7,6 +8,8 @@ import datetime
 import operator
 
 from distutils import util
+
+import arrow
 
 import bush.api
 import bush.config
@@ -51,13 +54,13 @@ def do_list(api, args):
     files = api.list()
     maxlen = max(len(f.tag) for f in files) if files else 0
     for f in files:
-        f.output(align=maxlen)
+        f.output(align=maxlen, extended=args.exact)
 
 
 def do_wait(api, args):
 
     latest = None
-    update = datetime.datetime.now() - datetime.timedelta(seconds=args.age)
+    update = arrow.now() - datetime.timedelta(seconds=args.age)
 
     knowntags = None
 
@@ -71,12 +74,24 @@ def do_wait(api, args):
             tags.add(f.tag)
         knowntags = tags
 
-    latest.output()
-    api.download(latest.tag, '.', callback=ShowProgress)
+    latest.output(humanize=not args.exact)
+    api.download(latest.tag, args.dest, callback=ShowProgress)
 
 
 def do_upload(api, args):
-    api.upload(args.file, tag=args.tag, callback=ShowProgress)
+
+    if args.tag is not None:
+        tag = args.tag
+    elif len(args.file) > 1:
+        tag = args.file.pop()
+        if ((os.path.isfile(tag) or os.path.isdir(tag)) and
+            not api.confirmation("Tag is also an existing file: %r." % tag,
+                                 level=bush.api.LOW)):
+            exit(1)
+    else:
+        tag = None
+
+    api.upload(args.file, tag=tag, callback=ShowProgress)
 
 
 def do_download(api, args):
@@ -102,17 +117,23 @@ def main():
 
     sub = subs.add_parser('ls', help="list information about available files")
     sub.set_defaults(callback=do_list)
+    sub.add_argument('-x', '--exact', action='store_true',
+                     help="show exact dates instead of ages")
 
     sub = subs.add_parser('wait', help="wait for a new file and download it")
     sub.set_defaults(callback=do_wait)
+    sub.add_argument('dest', nargs='?', default='./',
+                     help="path where the file should be downloaded")
     sub.add_argument('-a', '--age', default=0, type=int,
                      help="this many seconds old is new")
+    sub.add_argument('-x', '--exact', action='store_true',
+                     help="show exact dates instead of ages")
 
-    sub = subs.add_parser('up', help="upload a new file")
+    sub = subs.add_parser('up', help="upload new file(s)")
     sub.set_defaults(callback=do_upload)
-    sub.add_argument('file', help='path of the file to upload')
+    sub.add_argument('file', nargs='+', help='path of the file(s) to upload')
     sub.add_argument('tag', nargs="?", default=None,
-                     help='the name associated with the file to upload')
+                     help='the name associated with the file(s) to upload')
 
     sub = subs.add_parser('dl', help="download a file")
     sub.set_defaults(callback=do_download)
@@ -127,6 +148,7 @@ def main():
 
     sub = subs.add_parser('reset', help="delete all files")
     sub.set_defaults(callback=do_reset)
+
     parser.add_argument('-u', '--url', help="API endpoint")
     parser.add_argument("-c", "--config", type=argparse.FileType("r"),
                         help="path overwriting the default configuration file")

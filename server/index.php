@@ -1,6 +1,9 @@
 <?php
 /* Created by BestPig */
 
+ob_start();
+error_reporting(0);
+
 define('DATAPATH', './data/');
 
 require 'storage.php';
@@ -9,7 +12,8 @@ $db = new Storage(DATAPATH.'/files.sqlite', DATAPATH);
 
 if (isset($_GET['request'])) {
 	if ($_GET['request'] == "upload") {
-		if ($_GET['request'] == "upload" && !empty($_POST['tag']) && !empty($_FILES['file']['name'])) {
+		if ($_GET['request'] == "upload" && !empty($_POST['tag']) && !empty($_FILES['file']['name'])
+			&& is_uploaded_file($_FILES['file']['tmp_name'])) {
 			$id = $db->addFile($_POST['tag'], $_FILES['file']['name'], 0);
 			if ($id !== NULL) {
 				$filepath = DATAPATH."/".$id.".bin";
@@ -42,9 +46,10 @@ if (isset($_GET['request'])) {
 
 	if ($_GET['request'] == 'get' && !empty($_GET['tag'])) {
 		$file = $db->getFile($_GET['tag']);
-		if (!empty($file[0]['id']) && !empty($file[0]['name'])) {
-			$filepath = DATAPATH."/".$file[0]['id'].".bin";
-			header("Content-Disposition: attachment; filename=" . urlencode($file[0]['name']));    
+		if (!empty($file['id']) && !empty($file['name'])) {
+			$filepath = DATAPATH."/".$file['id'].".bin";
+			ob_end_flush();
+			header("Content-Disposition: attachment; filename=" . urlencode($file['name']));
 			header("Content-Type: application/force-download");
 			header("Content-Type: application/octet-stream");
 			header("Content-Type: application/download");
@@ -54,7 +59,10 @@ if (isset($_GET['request'])) {
 		}
 		else {
 			header('HTTP/1.1 404 Not Found');
-			echo "File not found.";
+			echo json_encode(array(
+				'status' => 'KO',
+				'message'=> 'Non-existing tag or filename')
+			);
 		}
 		exit();
 	}
@@ -71,7 +79,7 @@ if (isset($_GET['request'])) {
 			header('HTTP/1.1 404 Not Found');
 			echo json_encode(array(
 				'status' => 'KO',
-				'message'=> 'Non-existing Tag')
+				'message'=> 'Non-existing tag or filename')
 			);
 		}
 		exit();
