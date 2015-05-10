@@ -13,10 +13,11 @@ before_install:
 install:
   - pip install -r client/requirements.txt
   - bash -c "cd client/; python setup.py install"
+  - mkdir -p $HOME/.config/bush/
+  - echo -e "url: http://127.0.0.1:8080/" > $HOME/.config/bush/config.yaml
+  - nohup bash -c "cd server/; php -S 127.0.0.1:8080" &
 
 script:
-  - nohup bash -c "cd server/; php -S 127.0.0.1:8080" &
-  - bush -u http://localhost:8080/ up client/requirements.txt
-  - bush -u http://localhost:8080/ ls
-  - bush -h
- 
+  - bush up client/rdequirements.txt
+  - bush ls | grep requirements | grep requirements.txt
+  - sqlite3 -help
