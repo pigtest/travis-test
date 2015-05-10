@@ -16,5 +16,5 @@ install:
   - bash -c "cd client/; python setup.py install"
 
 script:
-  - bush -u http://localhost:8080/ up requirements.txt
+  - bush -u http://localhost:8080/ up client/requirements.txt
   - bush -u http://localhost:8080/ ls
