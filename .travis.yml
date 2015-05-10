@@ -14,7 +14,7 @@ install:
   - pip install -r client/requirements.txt
   - bash -c "cd client/; python setup.py install"
   - mkdir -p $HOME/.config/bush/
-  - echo -e "url: http://127.0.0.1:8080/" > $HOME/.config/bush/config.yaml
+  - echo "url: http://127.0.0.1:8080/" > $HOME/.config/bush/config.yaml
   - nohup bash -c "cd server/; php -S 127.0.0.1:8080" &
 
 script:
