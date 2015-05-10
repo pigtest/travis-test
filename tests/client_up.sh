@@ -8,7 +8,7 @@ function cleanup {
 }
 
 cd $SERVER_DIR
-php -S 127.0.0.1:8080
+nohup php -S 127.0.0.1:8080 &
 cd -
 
 cd "$TEMP_DIR" > /dev/null
