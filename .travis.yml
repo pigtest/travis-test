@@ -16,5 +16,5 @@ install:
   - bash -c "cd client/; python setup.py install"
 
 script:
-  - bash -c "cd server/; php -v; php -S 127.0.0.1:8080"
-  - bash -c "cd client/; bush -u http://localhost:8080/ up requirements.txt; bush -u http://localhost:8080/ ls"
+  - bush -u http://localhost:8080/ up requirements.txt
+  - bush -u http://localhost:8080/ ls
