@@ -1,7 +1,7 @@
 #!/bin/bash
 
 TEMP_DIR=$(mktemp -d)
-SERVER_DIR=$(realpath "$(dirname "$(realpath "$0")")/../server/")
+SERVER_DIR=$(pwd)/server/
 
 function cleanup {
     rm -f $SERVER_DIR/data/*
@@ -59,7 +59,7 @@ function test3 {
 
 function test4 {
     echo "Checking directory upload without tag"
-    bush up $TEMP_DIR/
+    bush up $TEMP_DIR
 
     sqlite3 "$SERVER_DIR"/data/files.sqlite 'select * from files' | wc -l | grep -e '^1$'
 
@@ -72,10 +72,10 @@ function test4 {
 }
 
 function test5 {
-    echo "Checking directory upload with tag"
-    bush up $TEMP_DIR/ dirtag
+    echo "Checking directory upload without tag (Ending / in dirname)"
+    bush up $TEMP_DIR/
 
-    sqlite3 "$SERVER_DIR"/data/files.sqlite 'select * from files where tag = "dirtag"' | wc -l | grep -e '^1$'
+    sqlite3 "$SERVER_DIR"/data/files.sqlite 'select * from files' | wc -l | grep -e '^1$'
 
     if [[ $? -ne 0 ]] ; then
 	echo "Fail test5."
@@ -85,9 +85,26 @@ function test5 {
     cleanup
 }
 
+
+function test6 {
+    echo "Checking directory upload with tag"
+    bush up $TEMP_DIR/ dirtag
+
+    sqlite3 "$SERVER_DIR"/data/files.sqlite 'select * from files where tag = "dirtag"' | wc -l | grep -e '^1$'
+
+    if [[ $? -ne 0 ]] ; then
+	echo "Fail test6."
+	exit 1
+    fi
+
+    cleanup
+}
+
 test1
 test2
 test3
+test4
 test5
+test6
 
 rm -rf "$TEMP_DIR"
