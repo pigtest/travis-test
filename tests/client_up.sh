@@ -1,11 +1,15 @@
 #!/bin/bash
-
+set -m
 TEMP_DIR=$(mktemp -d)
 SERVER_DIR=$(pwd)/server/
 
 function cleanup {
     rm -f $SERVER_DIR/data/*
 }
+
+cd $SERVER_DIR
+php -S 127.0.0.1:8080 &
+cd -
 
 cd "$TEMP_DIR" > /dev/null
 
@@ -17,7 +21,7 @@ echo "ff" > dir/file2.txt
 
 function test1 {
     echo "Checking simple upload without specifing tag"
-    bush up file1.txt
+    $BUSH_CMD up file1.txt
 
     sqlite3 "$SERVER_DIR"/data/files.sqlite 'select * from files' | wc -l | grep -e '^1$'
 
@@ -31,7 +35,7 @@ function test1 {
 
 function test2 {
     echo "Checking simple upload with tag"
-    bush up file1.txt thetag
+    $BUSH_CMD up file1.txt thetag
 
     sqlite3 "$SERVER_DIR"/data/files.sqlite 'select * from files where tag = "thetag"' | wc -l | grep -e '^1$'
 
@@ -45,7 +49,7 @@ function test2 {
 
 function test3 {
     echo "Checking multiple files upload with tag"
-    bush up file1.txt dir/file2.txt filestag
+    $BUSH_CMD up file1.txt dir/file2.txt filestag
 
     sqlite3 "$SERVER_DIR"/data/files.sqlite 'select * from files where tag = "filestag"' | wc -l | grep -e '^1$'
 
@@ -59,7 +63,7 @@ function test3 {
 
 function test4 {
     echo "Checking directory upload without tag"
-    bush up $TEMP_DIR
+    $BUSH_CMD up $TEMP_DIR
 
     sqlite3 "$SERVER_DIR"/data/files.sqlite 'select * from files' | wc -l | grep -e '^1$'
 
@@ -73,7 +77,7 @@ function test4 {
 
 function test5 {
     echo "Checking directory upload without tag (Ending / in dirname)"
-    bush up $TEMP_DIR/
+    $BUSH_CMD up $TEMP_DIR/
 
     sqlite3 "$SERVER_DIR"/data/files.sqlite 'select * from files' | wc -l | grep -e '^1$'
 
@@ -88,7 +92,7 @@ function test5 {
 
 function test6 {
     echo "Checking directory upload with tag"
-    bush up $TEMP_DIR/ dirtag
+    $BUSH_CMD up $TEMP_DIR/ dirtag
 
     sqlite3 "$SERVER_DIR"/data/files.sqlite 'select * from files where tag = "dirtag"' | wc -l | grep -e '^1$'
 
@@ -106,5 +110,7 @@ test3
 test4
 test5
 test6
+
+killall php
 
 rm -rf "$TEMP_DIR"

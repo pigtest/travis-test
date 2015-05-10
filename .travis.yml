@@ -4,6 +4,9 @@ language:
 python:
   - "3.4"
 
+env:
+  - BUSH_CMD=bush
+
 before_install:
   - sudo apt-get update -qq
   - sudo apt-get -y install python-software-properties software-properties-common
@@ -15,8 +18,7 @@ install:
   - pip install -r client/requirements.txt
   - bash -c "cd client/; python setup.py install"
   - mkdir -p $HOME/.config/bush/
-  # base64 to get around colon character problem, even in quote (urlcolon replaced by url=> at runtime in travis-ci)
-  - echo 'dXJsOiBodHRwOi8vMTI3LjAuMC4xOjgwODAvCg==' | base64 -d > $HOME/.config/bush/config.yaml
+  - cp tests/config/config.yaml $HOME/.config/bush/
   - nohup bash -c "cd server/; php -S 127.0.0.1:8080" &
 
 script:
