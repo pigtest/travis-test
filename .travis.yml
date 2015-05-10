@@ -19,7 +19,6 @@ install:
   - bash -c "cd client/; python setup.py install"
   - mkdir -p $HOME/.config/bush/
   - cp tests/config/config.yaml $HOME/.config/bush/
-  - nohup bash -c "cd server/; php -S 127.0.0.1:8080" &
 
 script:
   - tests/client_up.sh
