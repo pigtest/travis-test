@@ -1,6 +1,12 @@
-language: python
+language:
+  - python
+  - php
 
-python: "3.4"
+python:
+  - "3.4"
+
+php:
+  - "5.4"
 
 before_install:
   - sudo apt-get update -qq
